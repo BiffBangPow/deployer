@@ -1,5 +1,6 @@
 {
   "name": "biffbangpow/deployer",
+  "type": "composer-plugin",
   "description": "",
   "minimum-stability": "stable",
   "license": "proprietary",
