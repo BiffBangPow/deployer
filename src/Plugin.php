@@ -26,7 +26,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     {
         $message = <<<MSG
 ===========================
-MyOrg Deploy Plugin Notice
+Deployer Plugin Notice
 ===========================
 
 To enable deployment, please add the following script to your project's composer.json:
