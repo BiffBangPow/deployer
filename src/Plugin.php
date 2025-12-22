@@ -55,7 +55,7 @@ EOD;
             // Create file if it doesn't exist
             if (!file_exists($ignorePath)) {
                 file_put_contents($ignorePath, "deployer\n");
-                $io->write("Created $ignoreFile and added 'deployer'");
+                $this->io->write("Created $ignoreFile and added 'deployer'");
                 continue;
             }
 
@@ -68,9 +68,9 @@ EOD;
                 // Append with newline if file doesn't end with newline
                 $content = rtrim($content) . "\n" . "deployer\n";
                 file_put_contents($ignorePath, $content);
-                $io->write("Added 'deployer' to $ignoreFile");
+                $this->io->write("Added 'deployer' to $ignoreFile");
             } else {
-                $io->write("'deployer' already exists in $ignoreFile");
+                $this->io->write("'deployer' already exists in $ignoreFile");
             }
         }
         
