@@ -14,6 +14,8 @@ if (!file_exists($configFile)) {
     throw new \RuntimeException("Missing deploy.yml file in project root.");
 }
 
+set('ssh_multiplexing', true);
+
 $config = Yaml::parseFile($configFile);
 
 // Merge excludes
