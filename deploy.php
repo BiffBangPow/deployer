@@ -1,25 +1,31 @@
 <?php
 namespace Deployer;
 
-require 'vendor/autoload.php';
 require 'recipe/common.php';
 
 use Symfony\Component\Yaml\Yaml;
 
-// Load deploy.yml config
-$configFile = __DIR__ . '/deploy.yml';
+// Project root (not vendor dir)
+$projectRoot = getcwd();
+
+// Load deploy.yml
+$configFile = $projectRoot . '/deploy.yml';
 if (!file_exists($configFile)) {
     throw new \RuntimeException("Missing deploy.yml file in project root.");
 }
+
 $config = Yaml::parseFile($configFile);
 
-// Merge excludes from deploy.yml and optional .deployignore
+// Merge excludes
 $exclude = $config['exclude'] ?? [];
-$deployIgnoreFile = __DIR__ . '/.deployignore';
+$deployIgnoreFile = $projectRoot . '/.deployignore';
+
 if (file_exists($deployIgnoreFile)) {
-    $deployIgnore = file($deployIgnoreFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $lines = file($deployIgnoreFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $deployIgnore = array_filter($lines, fn ($line) => strpos(trim($line), '#') !== 0);
     $exclude = array_merge($exclude, $deployIgnore);
 }
+
 $exclude = array_unique($exclude);
 
 // Disable remote git clone, since we upload built files
@@ -49,11 +55,10 @@ task('build:local', function () use ($config) {
 });
 
 // Rsync task with excludes
-task('deploy:rsync', function () use ($exclude, $config) {
-    $src = rtrim(realpath(__DIR__), '/') . '/';
+task('deploy:rsync', function () use ($exclude, $config, $projectRoot) {
+    $src  = rtrim(realpath($projectRoot), '/') . '/';
     $dest = '{{release_path}}';
 
-    // Build exclude arguments for rsync
     $excludeArgs = '';
     foreach ($exclude as $item) {
         $excludeArgs .= " --exclude='$item'";
@@ -63,11 +68,9 @@ task('deploy:rsync', function () use ($exclude, $config) {
     $user = $config['server']['user'];
     $port = $config['server']['port'] ?? 22;
 
-    // Compose SSH command with port
-    $sshCmd = "-e 'ssh -p $port'";
-
-    // Run rsync locally to remote
-    runLocally("rsync -az --delete $excludeArgs $sshCmd $src $user@$host:$dest");
+    runLocally(
+        "rsync -az --delete $excludeArgs -e 'ssh -p $port' $src $user@$host:$dest"
+    );
 });
 
 // Production commands before symlink switch
