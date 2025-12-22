@@ -28,7 +28,8 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            'post-install-cmd' => 'notifyDeployScript'
+            'post-install-cmd' => 'notifyDeployScript',
+            'post-update-cmd' => 'notifyDeployScript'
         ];
     }
 
