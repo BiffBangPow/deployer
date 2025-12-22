@@ -48,6 +48,34 @@ host($config['project']['name'])
     ->setPort($config['server']['port'] ?? 22)
     ->setDeployPath($config['server']['deploy_path']);
 
+/**
+ * Interactive confirmation before deployment
+ */
+task('deploy:confirm', function () {
+    $branch = trim(runLocally('git rev-parse --abbrev-ref HEAD'));
+    
+    writeln("<comment>You are about to deploy branch: <info>$branch</info></comment>");
+    writeln("<comment>Server: <info>{{hostname}}</info></comment>");
+    writeln("<comment>Deploy path: <info>{{deploy_path}}</info></comment>");
+    writeln("");
+    
+    if (!askConfirmation('Do you wish to continue?', false)) {
+        throw new \RuntimeException('Deployment cancelled by user.');
+    }
+});
+
+/**
+ * Ensure git working tree is clean before deploying
+ */
+task('git:check_clean', function () {
+    $status = trim(runLocally('git status --porcelain'));
+    if ($status !== '') {
+        throw new \RuntimeException(
+            "Working tree is not clean.\nCommit or stash changes before deploying."
+        );
+    }
+});
+
 // Local build task
 task('build:local', function () use ($config) {
     foreach ($config['build']['local'] ?? [] as $command) {
@@ -89,23 +117,12 @@ task('deploy:after_symlink', function () use ($config) {
     }
 });
 
-/**
- * Ensure git working tree is clean before deploying
- */
-task('git:check_clean', function () {
-    $status = trim(runLocally('git status --porcelain'));
-    if ($status !== '') {
-        throw new \RuntimeException(
-            "Working tree is not clean.\nCommit or stash changes before deploying."
-        );
-    }
-});
-
 task('deploy:update_code', function () {
     writeln('Skipping deploy:update_code - deploying local build via rsync.');
 });
 
 // Hooks wiring
+before('deploy', 'deploy:confirm');
 before('build:local', 'git:check_clean');
 before('deploy:prepare', 'build:local');
 before('deploy:shared', 'deploy:rsync');
