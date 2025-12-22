@@ -45,6 +45,35 @@ EOD;
 
         file_put_contents($scriptPath, $scriptContent);
         chmod($scriptPath, 0755);
+
+        // Files to update
+        $ignoreFiles = ['.gitignore', '.deployignore'];
+
+        foreach ($ignoreFiles as $ignoreFile) {
+            $ignorePath = $projectRoot . '/' . $ignoreFile;
+
+            // Create file if it doesn't exist
+            if (!file_exists($ignorePath)) {
+                file_put_contents($ignorePath, "deployer\n");
+                $io->write("Created $ignoreFile and added 'deployer'");
+                continue;
+            }
+
+            // Read existing content
+            $content = file_get_contents($ignorePath);
+            $lines = preg_split('/\R/', $content);
+
+            // Add 'deployer' if not present
+            if (!in_array('deployer', $lines, true)) {
+                // Append with newline if file doesn't end with newline
+                $content = rtrim($content) . "\n" . "deployer\n";
+                file_put_contents($ignorePath, $content);
+                $io->write("Added 'deployer' to $ignoreFile");
+            } else {
+                $io->write("'deployer' already exists in $ignoreFile");
+            }
+        }
+        
         
         $message = <<<MSG
 ===========================
