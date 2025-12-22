@@ -1,0 +1,27 @@
+{
+  "name": "biffbangpow/deployer",
+  "description": "",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Tim Burt",
+      "email": "tim@biffbangpow.com"
+    }
+  ],
+  "require": {
+    "php": ">=8.0",
+    "deployer/deployer": "^7.5",
+    "symfony/yaml": "^7.4",
+    "composer-plugin-api": "^2"
+  },
+  "autoload": {
+    "psr-4": {
+      "BiffBangPow\\DeployPlugin\\": "src/"
+    }
+  },
+  "extra": {
+    "class": "BiffBangPow\\DeployPlugin\\Plugin"
+  },
+  "prefer-stable": true
+}
