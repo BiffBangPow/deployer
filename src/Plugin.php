@@ -15,10 +15,21 @@ class Plugin implements PluginInterface, EventSubscriberInterface
         $this->io = $io;
     }
 
+    public function deactivate(Composer $composer, IOInterface $io): void
+    {
+        // No-op
+    }
+
+    public function uninstall(Composer $composer, IOInterface $io): void
+    {
+        // No-op
+    }
+
     public static function getSubscribedEvents(): array
     {
         return [
-            'post-install-cmd' => 'notifyDeployScript'
+            'post-install-cmd' => 'notifyDeployScript',
+            'post-update-cmd'  => 'notifyDeployScript',
         ];
     }
 
@@ -26,13 +37,13 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     {
         $message = <<<MSG
 ===========================
-Deployer Plugin Notice
+BiffBangPow Deployer Notice
 ===========================
 
 To enable deployment, please add the following script to your project's composer.json:
 
 "scripts": {
-    "deploy": "dep -f vendor/biffbangow/deployer/deploy.php deploy"
+    "deploy": "dep -f vendor/biffbangpow/deployer/deploy.php deploy"
 }
 
 You can then deploy with:
@@ -42,6 +53,7 @@ composer deploy
 ===========================
 
 MSG;
+
         $this->io->write($message);
     }
 }
