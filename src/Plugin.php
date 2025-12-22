@@ -28,28 +28,30 @@ class Plugin implements PluginInterface, EventSubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            'post-install-cmd' => 'notifyDeployScript',
-            'post-update-cmd'  => 'notifyDeployScript',
+            'post-install-cmd' => 'notifyDeployScript'
         ];
     }
 
     public function notifyDeployScript(): void
     {
+        $projectRoot = getcwd();
+        $scriptPath = $projectRoot . '/deployer';
+
+        $scriptContent = <<<'EOD'
+#!/bin/sh
+./vendor/deployer/deployer/bin/dep -f vendor/biffbangpow/deployer/deploy.php "$@"
+EOD;
+
+        file_put_contents($scriptPath, $scriptContent);
+        chmod($scriptPath, 0755);
+        
         $message = <<<MSG
 ===========================
 BiffBangPow Deployer Notice
 ===========================
-
-To enable deployment, please add the following script to your project's composer.json:
-
-"scripts": {
-    "deploy": "dep -f vendor/biffbangpow/deployer/deploy.php deploy"
-}
-
-You can then deploy with:
-
-composer deploy
-
+A new script has been added to the project root to enable quick deployments.  
+            It can be accessed by running:  "./deployer deploy"  (for deployments)
+            and "./deployer rollback"  (for rollbacks)
 ===========================
 
 MSG;
