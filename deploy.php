@@ -36,10 +36,12 @@ set('repository', '');
 // Basic settings from YAML config
 set('application', $config['project']['name']);
 set('deploy_path', $config['server']['deploy_path']);
-set('shared_dirs', $config['shared'] ?? []);
+set('shared_dirs', $config['shared_dirs'] ?? []);
+set('shared_files', $config['shared_files'] ?? []);
 set('writable_dirs', $config['writable'] ?? []);
 set('keep_releases', 2);
 set('git_tty', false);
+
 
 // Define host
 host($config['project']['name'])
@@ -121,6 +123,105 @@ task('deploy:update_code', function () {
     writeln('Skipping deploy:update_code - deploying local build via rsync.');
 });
 
+desc('Install composer dependencies inside PHP container');
+task('deploy:composer', function () use ($config) {
+
+    $composerConfig = $config['composer'] ?? [];
+    $shouldInstall  = $composerConfig['install'] ?? true;
+
+    if (!$shouldInstall) {
+        writeln('<comment>Skipping composer install (disabled in deploy.yml)</comment>');
+        return;
+    }
+
+    $installDev  = $composerConfig['install_dev'] ?? false;
+    $showOutput  = $composerConfig['show_output'] ?? false;
+
+    $releasePath = get('release_path');
+
+    $phpImage = sprintf(
+        '%s.dkr.ecr.%s.amazonaws.com/php-fpm-%s',
+        $config['aws']['aws_account_id'],
+        $config['aws']['aws_region'],
+        $config['php']['version']
+    );
+
+    $cacheDir = '/home/ubuntu/.composer/cache';
+    $devFlag  = $installDev ? '' : '--no-dev';
+
+    $exec = function (string $cmd) use ($showOutput): void {
+        $output = run($cmd);
+        if ($showOutput && $output !== '') {
+            writeln($output);
+        }
+    };
+
+    $exec("mkdir -p {$cacheDir}");
+    $exec("docker pull {$phpImage}");
+
+    $exec("
+        docker run --rm \
+            --user 1000:1000 \
+            -v {$releasePath}:/app \
+            -v {$cacheDir}:/tmp/composer-cache \
+            -e COMPOSER_CACHE_DIR=/tmp/composer-cache \
+            -w /app \
+            {$phpImage} \
+            composer install \
+                {$devFlag} \
+                --prefer-dist \
+                --no-interaction \
+                --no-progress \
+                --optimize-autoloader \
+                --classmap-authoritative
+    ");
+});
+
+
+desc('Run SilverStripe dev/build inside PHP container');
+task('deploy:silverstripe_build', function () use ($config) {
+
+    $ssConfig  = $config['silverstripe'] ?? [];
+    $devBuild  = $ssConfig['dev_build'] ?? false;
+
+    if (!$devBuild) {
+        writeln('<comment>Skipping SilverStripe dev/build (disabled in deploy.yml)</comment>');
+        return;
+    }
+
+    $showOutput  = $ssConfig['show_output'] ?? false;
+
+    $releasePath = get('release_path');
+
+    $phpImage = sprintf(
+        '%s.dkr.ecr.%s.amazonaws.com/php-fpm-%s',
+        $config['aws']['aws_account_id'],
+        $config['aws']['aws_region'],
+        $config['php']['version']
+    );
+
+    $cacheDir = '/home/ubuntu/.composer/cache';
+
+    $exec = function (string $cmd) use ($showOutput): void {
+        $output = run($cmd);
+        if ($showOutput && $output !== '') {
+            writeln($output);
+        }
+    };
+
+    $exec("
+        docker run --rm \
+            --user 1000:1000 \
+            -v {$releasePath}:/app \
+            -v {$cacheDir}:/tmp/composer-cache \
+            -e COMPOSER_CACHE_DIR=/tmp/composer-cache \
+            -w /app \
+            {$phpImage} \
+            vendor/bin/sake dev/build 'flush=1'
+    ");
+});
+
+
 // Hooks wiring
 before('deploy', 'deploy:confirm');
 before('build:local', 'git:check_clean');
@@ -128,6 +229,8 @@ before('deploy:prepare', 'build:local');
 before('deploy:shared', 'deploy:rsync');
 before('deploy:symlink', 'deploy:before_symlink');
 after('deploy:symlink', 'deploy:after_symlink');
+after('deploy:shared', 'deploy:composer');
+after('deploy:composer', 'deploy:silverstripe_build');
 
 // Cleanup on failure
 after('deploy:failed', 'deploy:unlock');
