@@ -1,6 +1,5 @@
 {
   "name": "biffbangpow/deployer",
-  "type": "composer-plugin",
   "description": "",
   "minimum-stability": "stable",
   "license": "proprietary",
@@ -15,14 +14,6 @@
     "deployer/deployer": "^7.5",
     "symfony/yaml": "^7.4",
     "composer-plugin-api": "^2"
-  },
-  "autoload": {
-    "psr-4": {
-      "BiffBangPow\\DeployPlugin\\": "src/"
-    }
-  },
-  "extra": {
-    "class": "BiffBangPow\\DeployPlugin\\Plugin"
   },
   "prefer-stable": true
 }
