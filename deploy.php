@@ -33,9 +33,30 @@ $exclude = array_unique($exclude);
 // Disable remote git clone, since we upload built files
 set('repository', '');
 
+// Resolve stage from --stage=prod / --stage=staging CLI argument (defaults to staging)
+$stage = 'staging';
+foreach (array_slice($_SERVER['argv'] ?? [], 1) as $arg) {
+    if (preg_match('/^--stage=(.+)$/', $arg, $m)) {
+        $stage = $m[1];
+        break;
+    }
+}
+
+$validStages = ['staging', 'prod'];
+if (!in_array($stage, $validStages, true)) {
+    throw new \RuntimeException("Invalid stage '$stage'. Valid options: " . implode(', ', $validStages));
+}
+
+$deployPathKey = $stage . '_deploy_path';
+if (empty($config['server'][$deployPathKey])) {
+    throw new \RuntimeException("Missing '$deployPathKey' in deploy.yml server config.");
+}
+
+$deployPath = $config['server'][$deployPathKey];
+
 // Basic settings from YAML config
 set('application', $config['project']['name']);
-set('deploy_path', $config['server']['deploy_path']);
+set('deploy_path', $deployPath);
 set('shared_dirs', $config['shared_dirs'] ?? []);
 set('shared_files', $config['shared_files'] ?? []);
 set('writable_dirs', $config['writable'] ?? []);
@@ -48,19 +69,20 @@ host($config['project']['name'])
     ->setHostname($config['server']['host'])
     ->setRemoteUser($config['server']['user'])
     ->setPort($config['server']['port'] ?? 22)
-    ->setDeployPath($config['server']['deploy_path']);
+    ->setDeployPath($deployPath);
 
 /**
  * Interactive confirmation before deployment
  */
-task('deploy:confirm', function () {
+task('deploy:confirm', function () use ($stage) {
     $branch = trim(runLocally('git rev-parse --abbrev-ref HEAD'));
-    
+
     writeln("<comment>You are about to deploy branch: <info>$branch</info></comment>");
+    writeln("<comment>Stage: <info>$stage</info></comment>");
     writeln("<comment>Server: <info>{{hostname}}</info></comment>");
     writeln("<comment>Deploy path: <info>{{deploy_path}}</info></comment>");
     writeln("");
-    
+
     if (!askConfirmation('Do you wish to continue?', false)) {
         throw new \RuntimeException('Deployment cancelled by user.');
     }
