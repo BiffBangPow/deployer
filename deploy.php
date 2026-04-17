@@ -4,6 +4,7 @@ namespace Deployer;
 require 'recipe/common.php';
 
 use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Console\Input\InputOption;
 
 // Project root (not vendor dir)
 $projectRoot = getcwd();
@@ -34,26 +35,10 @@ $exclude = array_unique($exclude);
 set('repository', '');
 
 // Register --stage as a recognised Deployer option
-option('stage', null, \Symfony\Component\Console\Input\InputOption::VALUE_REQUIRED, 'Deployment stage (staging or prod)', 'staging');
-
-// Resolve stage
-$stage = input()->getOption('stage');
-
-$validStages = ['staging', 'prod'];
-if (!in_array($stage, $validStages, true)) {
-    throw new \RuntimeException("Invalid stage '$stage'. Valid options: " . implode(', ', $validStages));
-}
-
-$deployPathKey = $stage . '_deploy_path';
-if (empty($config['server'][$deployPathKey])) {
-    throw new \RuntimeException("Missing '$deployPathKey' in deploy.yml server config.");
-}
-
-$deployPath = $config['server'][$deployPathKey];
+option('stage', null, InputOption::VALUE_REQUIRED, 'Deployment stage (staging or prod)', 'staging');
 
 // Basic settings from YAML config
 set('application', $config['project']['name']);
-set('deploy_path', $deployPath);
 set('shared_dirs', $config['shared_dirs'] ?? []);
 set('shared_files', $config['shared_files'] ?? []);
 set('writable_dirs', $config['writable'] ?? []);
@@ -61,21 +46,41 @@ set('keep_releases', 2);
 set('git_tty', false);
 
 
-// Define host
+// Define host — deploy_path is set at runtime by deploy:resolve_stage
 host($config['project']['name'])
     ->setHostname($config['server']['host'])
     ->setRemoteUser($config['server']['user'])
     ->setPort($config['server']['port'] ?? 22)
-    ->setDeployPath($deployPath);
+    ->setDeployPath('{{deploy_path}}');
+
+/**
+ * Resolve stage and set deploy_path before anything else runs
+ */
+task('deploy:resolve_stage', function () use ($config) {
+    $stage = input()->getOption('stage');
+
+    $validStages = ['staging', 'prod'];
+    if (!in_array($stage, $validStages, true)) {
+        throw new \RuntimeException("Invalid stage '$stage'. Valid options: " . implode(', ', $validStages));
+    }
+
+    $deployPathKey = $stage . '_deploy_path';
+    if (empty($config['server'][$deployPathKey])) {
+        throw new \RuntimeException("Missing '$deployPathKey' in deploy.yml server config.");
+    }
+
+    set('deploy_path', $config['server'][$deployPathKey]);
+    set('current_stage', $stage);
+});
 
 /**
  * Interactive confirmation before deployment
  */
-task('deploy:confirm', function () use ($stage) {
+task('deploy:confirm', function () {
     $branch = trim(runLocally('git rev-parse --abbrev-ref HEAD'));
 
     writeln("<comment>You are about to deploy branch: <info>$branch</info></comment>");
-    writeln("<comment>Stage: <info>$stage</info></comment>");
+    writeln("<comment>Stage: <info>{{current_stage}}</info></comment>");
     writeln("<comment>Server: <info>{{hostname}}</info></comment>");
     writeln("<comment>Deploy path: <info>{{deploy_path}}</info></comment>");
     writeln("");
@@ -242,6 +247,7 @@ task('deploy:silverstripe_build', function () use ($config) {
 
 
 // Hooks wiring
+before('deploy:confirm', 'deploy:resolve_stage');
 before('deploy', 'deploy:confirm');
 before('build:local', 'git:check_clean');
 before('deploy:prepare', 'build:local');
