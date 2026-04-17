@@ -33,14 +33,11 @@ $exclude = array_unique($exclude);
 // Disable remote git clone, since we upload built files
 set('repository', '');
 
-// Resolve stage from --stage=prod / --stage=staging CLI argument (defaults to staging)
-$stage = 'staging';
-foreach (array_slice($_SERVER['argv'] ?? [], 1) as $arg) {
-    if (preg_match('/^--stage=(.+)$/', $arg, $m)) {
-        $stage = $m[1];
-        break;
-    }
-}
+// Register --stage as a recognised Deployer option
+option('stage', null, \Symfony\Component\Console\Input\InputOption::VALUE_REQUIRED, 'Deployment stage (staging or prod)', 'staging');
+
+// Resolve stage
+$stage = input()->getOption('stage');
 
 $validStages = ['staging', 'prod'];
 if (!in_array($stage, $validStages, true)) {
