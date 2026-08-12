@@ -103,10 +103,12 @@ task('git:check_clean', function () {
 });
 
 // Local build task
-task('build:local', function () use ($config) {
+task('build:local', function () use ($config, $projectRoot) {
     foreach ($config['build']['local'] ?? [] as $command) {
         writeln("<info>Running locally:</info> $command");
-        runLocally($command);
+        runLocally(
+            'cd ' . escapeshellarg($projectRoot) . ' && ' . $command
+        );
     }
 });
 
