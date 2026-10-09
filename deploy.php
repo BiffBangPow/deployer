@@ -1,10 +1,11 @@
 <?php
+
 namespace Deployer;
 
 require 'recipe/common.php';
 
-use Symfony\Component\Yaml\Yaml;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Yaml\Yaml;
 
 // Project root (not vendor dir)
 $projectRoot = getcwd();
@@ -25,7 +26,7 @@ $deployIgnoreFile = $projectRoot . '/.deployignore';
 
 if (file_exists($deployIgnoreFile)) {
     $lines = file($deployIgnoreFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    $deployIgnore = array_filter($lines, fn ($line) => strpos(trim($line), '#') !== 0);
+    $deployIgnore = array_filter($lines, fn($line) => strpos(trim($line), '#') !== 0);
     $exclude = array_merge($exclude, $deployIgnore);
 }
 
@@ -114,7 +115,7 @@ task('build:local', function () use ($config, $projectRoot) {
 
 // Rsync task with excludes
 task('deploy:rsync', function () use ($exclude, $config, $projectRoot) {
-    $src  = rtrim(realpath($projectRoot), '/') . '/';
+    $src = rtrim(realpath($projectRoot), '/') . '/';
     $dest = '{{release_path}}';
 
     $excludeArgs = '';
@@ -153,15 +154,15 @@ desc('Install composer dependencies inside PHP container');
 task('deploy:composer', function () use ($config) {
 
     $composerConfig = $config['composer'] ?? [];
-    $shouldInstall  = $composerConfig['install'] ?? true;
+    $shouldInstall = $composerConfig['install'] ?? true;
 
     if (!$shouldInstall) {
         writeln('<comment>Skipping composer install (disabled in deploy.yml)</comment>');
         return;
     }
 
-    $installDev  = $composerConfig['install_dev'] ?? false;
-    $showOutput  = $composerConfig['show_output'] ?? false;
+    $installDev = $composerConfig['install_dev'] ?? false;
+    $showOutput = $composerConfig['show_output'] ?? false;
 
     $releasePath = get('release_path');
 
@@ -173,7 +174,7 @@ task('deploy:composer', function () use ($config) {
     );
 
     $cacheDir = '/home/ubuntu/.composer/cache';
-    $devFlag  = $installDev ? '' : '--no-dev';
+    $devFlag = $installDev ? '' : '--no-dev';
 
     $exec = function (string $cmd) use ($showOutput): void {
         $output = run($cmd);
@@ -207,15 +208,15 @@ task('deploy:composer', function () use ($config) {
 desc('Run SilverStripe dev/build inside PHP container');
 task('deploy:silverstripe_build', function () use ($config) {
 
-    $ssConfig  = $config['silverstripe'] ?? [];
-    $devBuild  = $ssConfig['dev_build'] ?? false;
+    $ssConfig = $config['silverstripe'] ?? [];
+    $devBuild = $ssConfig['dev_build'] ?? false;
 
     if (!$devBuild) {
         writeln('<comment>Skipping SilverStripe dev/build (disabled in deploy.yml)</comment>');
         return;
     }
 
-    $showOutput  = $ssConfig['show_output'] ?? false;
+    $showOutput = $ssConfig['show_output'] ?? false;
 
     $releasePath = get('release_path');
 
@@ -234,17 +235,15 @@ task('deploy:silverstripe_build', function () use ($config) {
             writeln($output);
         }
     };
-
     $exec("
-        docker run --rm \
-            --user 1000:1000 \
-            -v {$releasePath}:/app \
-            -v {$cacheDir}:/tmp/composer-cache \
-            -e COMPOSER_CACHE_DIR=/tmp/composer-cache \
-            -w /app \
-            {$phpImage} \
-            vendor/bin/sake dev/build 'flush=1'
-    ");
+    docker run --rm \
+        --user 1000:1000 \
+        -v {$releasePath}:/app \
+        -v {{deploy_path}}/shared:/shared \
+        -w /app \
+        {$phpImage} \
+        vendor/bin/sake dev/build 'flush=1'
+");
 });
 
 
