@@ -3,6 +3,6 @@
   "description": "Compatibility package for DorsetDigital Silverstripe Deploy",
   "type": "metapackage",
   "require": {
-    "dorsetdigital/silverstripe-deploy": "dev-master"
+    "dorsetdigital/silverstripe-deploy": "dev-main"
   }
 }
