@@ -1,19 +1,8 @@
 {
-  "name": "biffbangpow/deployer",
-  "description": "",
-  "minimum-stability": "stable",
-  "license": "proprietary",
-  "authors": [
-    {
-      "name": "Tim Burt",
-      "email": "tim@biffbangpow.com"
-    }
-  ],
+  "name": "biffbangpow/silverstripe-deploy",
+  "description": "Compatibility package for DorsetDigital Silverstripe Deploy",
+  "type": "metapackage",
   "require": {
-    "php": ">=8.0",
-    "deployer/deployer": "^7.5",
-    "symfony/yaml": "*",
-    "composer-plugin-api": "^2"
-  },
-  "prefer-stable": true
+    "dorsetdigital/silverstripe-deploy": "dev-master"
+  }
 }
